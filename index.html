@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <style>
+  #chat{
+    height:500px;
+  }
+  #contentWrap{
+    display: none;
+  }
+  #chatWrap{
+    float: left;
+    border: 1px #000 solid;
+  }
+  .private{
+    color: gray;
+    font-style: italic;
+  }
+  .error{
+    color: red;
+  }
+  .msg{
+
+  }
+
+  </style>
+</head>
+<body>
+
+  <div id="userWrap">
+    <p> Enter Username:</p>
+    <p id="userError"></p>
+    <form id="setUser">
+      <input size="35" id="username"/>
+      <input type="submit"/>
+    </form>
+  </div>
+
+  <div id="contentWrap">
+    <div id="chatWrap">
+      <div id="chat"></div>
+      <form id="send-message">
+        <input size="35" id="message"/>
+        <span><input type="submit" value="send"/></span>
+      </form>
+    </div>
+    <div id="usernames"></div>
+  </div>
+
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <script>
+  jQuery(function($){
+    var socket = io.connect();
+    var $userForm = $('#setUser');
+    var $userError = $('#userError');
+    var $userBox = $('#username');
+    var $usernames = $('#usernames');
+    var $messageForm = $('#send-message');
+    var $messageBox = $('#message');
+    var $chat = $('#chat');
+
+    $userForm.submit(
+      function(e){
+        e.preventDefault();
+
+        socket.emit('new user', $userBox.val(), function(data){
+          if(data){
+            $('#userWrap').hide();
+            $('#contentWrap').show();
+          }
+          else{
+            $userError.html("That User name is already taken!");
+          }
+        });
+        $userBox.val('');
+      });
+
+      socket.on('usernames',function(data){
+        var html = '';
+        for(var i=0; i< data.length; i++){
+          html += data[i] + "<br/>";
+        }
+        $usernames.html(html);
+      });
+
+      $messageForm.submit(function(e){
+        e.preventDefault();
+        socket.emit('send message', $messageBox.val(), function(data){
+          $chat.append('<span class="error"><b>' + data + "</span><br/>");
+        });
+        $messageBox.val(' ');
+      });
+
+      socket.on('load old msg', function(docs){
+          for(var i=0; i<docs.length;i++){
+            displayMsg(docs[i]);
+          }
+      });
+
+      socket.on('new message', function(data){
+        displayMsg(data);
+      });
+
+      function displayMsg(data){
+        $chat.append('<span class="msg"><b>' + data.user + ' : </b>' + data.msg + "</span><br/>");
+      }
+
+      socket.on('private',function(data){
+        $chat.append('<span class="private"><b>' + data.user + ' : </b>' + data.msg + "</span><br/>");
+      });
+  });
+
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+
+</body>
+</html>
